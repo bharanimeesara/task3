@@ -1,158 +1,228 @@
-import java.awt.*;
-import java.awt.event.*;
-import javax.swing.*;
-import javax.swing.text.AttributeSet.ColorAttribute;
+// package com.atm;
 
-public class ATM {
-    static int balance=0;
-    public static void main(String args[]){
+import java.util.ArrayList;
+import java.util.Scanner;
 
-        JFrame f1,f2,f3;
-        f1=new JFrame();
-        JLabel l1,l2,l3;
+public class AtmInterface {
 
-        l1=new JLabel("Login to ATM");
-        l2=new JLabel("Username : ");
-        l3=new JLabel("ATM Pin : ");
 
-        JTextField t=new JTextField();
-        JPasswordField p=new JPasswordField(4);
-        JButton b=new JButton("LOGIN");
-        l1.setBounds(150,50,200,100);
-        l1.setFont(new Font("Courier",Font.BOLD,30));
-        l1.setForeground(Color.red);
-        l2.setBounds(150,150,100,30);
-        l3.setBounds(150,200,100,30);
-        t.setBounds(250,150,100,30);
-        p.setBounds(250,200,100,30);
-        b.setBounds(200,250,75,30);
-        f1.add(l1);f1.add(l2);f1.add(l3);f1.add(t);f1.add(p);f1.add(b);
-        f2=new JFrame();
-        JLabel l=new JLabel();
-        l.setBounds(150,30,300,50);
-        l.setFont(new Font("Courier",Font.BOLD,20));
-        f2.add(l);
+    public static class ATM {
+        private final Bank bank;
+        private final Scanner scanner;
 
-        JButton b1,b2,b3,b4,b5,b6;
+        public ATM() {
+            this.bank = new Bank();
+            this.scanner = new Scanner(System.in);
+        }
 
-        b1=new JButton("DEPOSITE");
-        b2=new JButton("WITHDRAW");
-        b3=new JButton("TRANSFER");
-        b4=new JButton("BALANCE");
-        b5=new JButton("HISTORY");
-        b6=new JButton("QUIT");
+        public boolean login() {
+            System.out.print("User ID: ");
+            String userID = scanner.nextLine();
+            System.out.print("User PIN: ");
+            String userPIN = scanner.nextLine();
+            return bank.authenticateUser(userID, userPIN);
+        }
 
-        JPanel pn=new JPanel();
-        pn.setBounds(50,100,400,300);
-        pn.setLayout(new GridLayout(3,2,50,50));
-        pn.add(b1);pn.add(b2);pn.add(b3);pn.add(b4);pn.add(b5);pn.add(b6);
-        f2.add(pn);
-        f3=new JFrame();
-        JButton q=new JButton("BACK");
-        q.setBounds(200,410,100,50);
-        f3.add(q);
-        JTextArea ta=new JTextArea();
-        ta.setBounds(0,50,500,350);
-        ta.setEditable(false);
-        f3.add(ta);
-        JLabel la=new JLabel("TRANSACTION HISTORY");
-        la.setBounds(200,0,200,50);
-        f3.add(la);
 
-        b.addActionListener(new ActionListener(){
-			public void actionPerformed(ActionEvent ae){
-                if(t.getText().isEmpty() && p.getText().isEmpty())
-                    JOptionPane.showMessageDialog(f1,"ENTER USERNAME AND ATM PIN");
-                else if(p.getText().isEmpty())
-                    JOptionPane.showMessageDialog(f1,"ENTER ATM PIN");
-                else if(t.getText().isEmpty())
-                    JOptionPane.showMessageDialog(f1,"ENTER USERNAME");
-                else{
-                    f1.setVisible(false);
-				    f2.setVisible(true);
-                    l.setText("Hello "+t.getText());
-                }
-			}
-		});
-
-        b1.addActionListener(new ActionListener(){
-            public void actionPerformed(ActionEvent ae){
-                String s=JOptionPane.showInputDialog(f2,"ENTER THE AMOUNT : ");
-                balance+=Float.parseFloat(s);
-                JOptionPane.showMessageDialog(f2,"AMOUNT DEPOSITED SUCCESSFULLY");
-                ta.append(Float.parseFloat(s)+" IS DEPOSITED SUCCESSFULLY.\n");
+        public void showTransactionHistory() {
+            User currentUser = bank.getCurrentUser();
+            System.out.println("Transaction history for " + currentUser.getFullName() + ":");
+            for (String transaction : currentUser.getTransactionHistory()) {
+                System.out.println(transaction);
             }
-        });
+        }
 
-        b2.addActionListener(new ActionListener(){
-            public void actionPerformed(ActionEvent ae){
-                String s=JOptionPane.showInputDialog(f2,"ENTER THE AMOUNT : ");
-                balance-=Float.parseFloat(s);
-                if(balance>=0){
-                    JOptionPane.showMessageDialog(f2,"AMOUNT WITHDRAWN SUCCESSFULLY");
-                    ta.append(Float.parseFloat(s)+" IS WITHDRAWN SUCCESSFULLY.\n");
-                }
-                else{
-                    JOptionPane.showMessageDialog(f2,"INSUFFICIENT BALANCE");
-                    balance+=Float.parseFloat(s);
-                }
+
+        public void doWithdraw() {
+            User currentUser = bank.getCurrentUser();
+            System.out.print("Enter amount to withdraw: ");
+            double amount = scanner.nextDouble();
+            if (currentUser.withdraw(amount)) {
+                System.out.println("Withdrawal successful, new balance: Rs." + currentUser.getAccountBalance());
+            } else {
+                System.out.println("Insufficient funds");
             }
-        });
+        }
 
-        b3.addActionListener(new ActionListener(){
-            public void actionPerformed(ActionEvent ae){
-                String str=JOptionPane.showInputDialog(f2,"ENTER THE NAME : ");
-                String s=JOptionPane.showInputDialog(f2,"ENTER THE AMOUNT : ");
-                balance-=Float.parseFloat(s);
-                if(balance>=0){
-                    JOptionPane.showMessageDialog(f2,"AMOUNT TRANSFERED TO "+str+" SUCCESSFULLY");
-                    ta.append(Float.parseFloat(s)+" IS TRANSFERED SUCCESSFULLY.\n");
-                }
-                else{
-                    JOptionPane.showMessageDialog(f2,"INSUFFICIENT BALANCE");
-                    balance+=Float.parseFloat(s);
+
+        public void doDeposit() {
+            User currentUser = bank.getCurrentUser();
+            System.out.print("Enter amount to deposit: ");
+            double amount = scanner.nextDouble();
+            currentUser.deposit(amount);
+            System.out.println("Deposit successful, new balance: Rs." + currentUser.getAccountBalance());
+        }
+
+
+        public void doTransfer() {
+            User currentUser = bank.getCurrentUser();
+
+            System.out.print("Enter Beneficiary user ID: ");
+            String recipientID = scanner.nextLine();
+            User recipient = bank.getUserByID(recipientID);
+            if (recipient == null) {
+                System.out.println("Recipient not found.");
+                return;
+            }
+
+
+            System.out.print("Enter amount to transfer: ");
+            double amount = scanner.nextDouble();
+            if (currentUser.transfer(amount, recipient)) {
+                System.out.println("Transfer successful, new balance:Rs. " + currentUser.getAccountBalance());
+            } else {
+                System.out.println("Insufficient funds");
+            }
+
+        }
+
+
+    }
+
+    public static class Bank {
+
+        private final ArrayList<User> users;
+        private User currentUser;
+
+        public Bank() {
+            this.users = new ArrayList<>();
+            this.currentUser = null;
+            // adding  some initial  users for testing
+            users.add(new User("Nag", "7434", "Nagendra BaBu", "Karakoti", 1000.0));
+            users.add(new User("Chinnodu", "5268", "Bhadri", "Karakoti", 1000000.0));
+
+        }
+
+        public boolean authenticateUser(String userID, String userPIN) {
+            for (User user : users) {
+                if (user.getUserID().equals(userID) && user.authenticate(userPIN)) {
+                    currentUser = user;
+                    return true;
                 }
             }
-        });
+            return false;
+        }
 
-        b4.addActionListener(new ActionListener(){
-            public void actionPerformed(ActionEvent ae){
-                JOptionPane.showMessageDialog(f2,"TOTAL BALANCE = "+balance);
-            }
-        });
+        public User getCurrentUser() {
+            return currentUser;
+        }
 
-        b5.addActionListener(new ActionListener(){
-            public void actionPerformed(ActionEvent ae){
-                f2.setVisible(false);
-                f3.setVisible(true);
+        public User getUserByID(String userID) {
+            for (User user : users) {
+                if (user.getUserID().equals(userID)) {
+                    return user;
+                }
             }
-        });
+            return null;
+        }
+    }
 
-        b6.addActionListener(new ActionListener(){
-            public void actionPerformed(ActionEvent ae){
-                f2.setVisible(false);
-                f1.setVisible(true);
-                t.setText("");
-                p.setText("");
-                balance=0;
-                ta.setText("");
-            }
-        });
-        q.addActionListener(new ActionListener(){
-            public void actionPerformed(ActionEvent ae){
-                f3.setVisible(false);
-                f2.setVisible(true);
-            }
-        });
+    public static class User {
 
-        f3.setSize(500,500);
-        f3.setLayout(null);
-        f2.setSize(500,500);
-        f2.setLayout(null);
-        f1.setSize(500,500);
-        f1.setLayout(null);
-        f1.setVisible(true);
-        f1.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        private final String userID;
+        private final String userPIN;
+        private final String firstName;
+        private final String lastName;
+        private double accountBalance;
+        private final ArrayList<String> transactionHistory;
+
+        public User(String userID, String userPIN, String firstName, String lastName, double initialBalance) {
+            this.userID = userID;
+            this.userPIN = userPIN;
+            this.firstName = firstName;
+            this.lastName = lastName;
+            this.accountBalance = initialBalance;
+            this.transactionHistory = new ArrayList<>();
+        }
+
+        public boolean authenticate(String userPIN) {
+            return this.userPIN.equals(userPIN);
+        }
+
+        public boolean withdraw(double amount) {
+            if (amount > accountBalance) {
+                return false;
+            } else {
+                accountBalance -= amount;
+                String transaction = "Withdrawal: -Rs." + amount + " New balance: Rs." + accountBalance;
+                transactionHistory.add(transaction);
+                return true;
+            }
+        }
+
+        public void deposit(double amount) {
+            accountBalance += amount;
+            String transaction = "Deposit: +Rs." + amount + " New balance: Rs." + accountBalance;
+            transactionHistory.add(transaction);
+        }
+
+        public boolean transfer(double amount, User recipient) {
+            if (amount <= accountBalance) {
+                accountBalance -= amount;
+                recipient.deposit(amount);
+                transactionHistory.add("Transfer of Rs." + amount + " to user " + recipient.getUserID());
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        public String getUserID() {
+            return userID;
+        }
+
+
+        public double getAccountBalance() {
+            return accountBalance;
+        }
+
+        public ArrayList<String> getTransactionHistory() {
+            return transactionHistory;
+        }
+
+        public String getFullName() {
+            return firstName + " " + lastName;
+        }
+    }
+
+    public static void main(String[] args) {
+
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Welcome to the SBI ATM");
+        System.out.println("PLEASE INSERT YOUR CARD");
+
+        ATM atm = new ATM();
+
+
+            if (atm.login()) {
+                while (true) {
+
+                    System.out.println("Choose an option:");
+                    System.out.println("1. View transaction history");
+                    System.out.println("2. Withdraw");
+                    System.out.println("3. Deposit");
+                    System.out.println("4. Transfer");
+                    System.out.println("5. Set PIN");
+                    System.out.println("6. Quit");
+                    System.out.print("Choice: ");
+
+                    int choice = scanner.nextInt();
+
+                    switch (choice) {
+                        case 1 -> atm.showTransactionHistory();
+                        case 2 -> atm.doWithdraw();
+                        case 3 -> atm.doDeposit();
+                        case 4 -> atm.doTransfer();
+                        case 6 -> {
+                            System.out.println("Thank You Visit Again.");
+                            return;
+                        }
+                        default -> System.out.println("Invalid choice, please try again");
+                    }
+                }
+            }
+
+
 
     }
 }
